@@ -87,43 +87,33 @@ local RegisterKeyMaps, MakeOrdinal
 -- Set check variable `player_is_emerg_driver` if player is driver of emergency vehicle.
 -- Disables controls faster than previous thread.
 CreateThread(function()
-	if GetResourceState('lux_vehcontrol') ~= 'started' and GetResourceState('lux_vehcontrol') ~= 'starting' then
-		if GetCurrentResourceName() == 'lvc' then
-			if community_id ~= nil and community_id ~= '' then
-				while true do
-					playerped = GetPlayerPed(-1)
-					--IS IN VEHICLE
-					player_is_emerg_driver = false
-					if IsPedInAnyVehicle(playerped, false) then
-						veh = GetVehiclePedIsUsing(playerped)
-						_, trailer = GetVehicleTrailerVehicle(veh)
-						--IS DRIVER
-						if GetPedInVehicleSeat(veh, -1) == playerped then
-							--IS EMERGENCY VEHICLE
-							if GetVehicleClass(veh) == 18 then
-								player_is_emerg_driver = true
-								DisableControlAction(0, 80, true) -- INPUT_VEH_CIN_CAM
-								DisableControlAction(0, 86, true) -- INPUT_VEH_HORN
-								DisableControlAction(0, 172, true) -- INPUT_CELLPHONE_UP
-							end
-						end
-					end
-					Wait(1)
-				end
-			else
-				Wait(1000)
-				HUD:ShowNotification(Lang:t('error.missing_community_id_frontend'), true)
-				UTIL:Print(Lang:t('error.missing_community_id_console'), true)
-			end
-		else
-			Wait(1000)
-			HUD:ShowNotification(Lang:t('error.invalid_resource_name_frontend'), true)
-			UTIL:Print(Lang:t('error.invalid_resource_name_console'), true)
-		end
-	else
-		Wait(1000)
+	if not (GetResourceState('lux_vehcontrol') ~= 'started' and GetResourceState('lux_vehcontrol') ~= 'starting') then Wait(1000)
 		HUD:ShowNotification(Lang:t('error.resource_conflict_frontend'), true)
 		UTIL:Print(Lang:t('error.resource_conflict_console'), true)
+		return
+	end
+	if not GetCurrentResourceName() == 'lvc' then Wait(1000)
+		HUD:ShowNotification(Lang:t('error.invalid_resource_name_frontend'), true)
+		UTIL:Print(Lang:t('error.invalid_resource_name_console'), true)
+		return
+	end
+	if not (community_id ~= nil and community_id ~= '') then Wait(1000)
+		HUD:ShowNotification(Lang:t('error.missing_community_id_frontend'), true)
+		UTIL:Print(Lang:t('error.missing_community_id_console'), true)
+		return
+	end
+	while true do Wait(0)
+		playerped = GetPlayerPed(-1)
+		player_is_emerg_driver = false -- IS IN VEHICLE
+		if not IsPedInAnyVehicle(playerped, false) then return end
+		veh = GetVehiclePedIsUsing(playerped)
+		_, trailer = GetVehicleTrailerVehicle(veh)
+		if not GetPedInVehicleSeat(veh, -1) == playerped then return end -- IS DRIVER
+		if not GetVehicleClass(veh) == 18 then return end -- IS EMERGENCY VEHICLE
+		player_is_emerg_driver = true
+		DisableControlAction(0, 80, true) -- INPUT_VEH_CIN_CAM
+		DisableControlAction(0, 86, true) -- INPUT_VEH_HORN
+		DisableControlAction(0, 172, true) -- INPUT_CELLPHONE_UP
 	end
 end)
 
