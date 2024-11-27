@@ -87,7 +87,7 @@ local RegisterKeyMaps, MakeOrdinal
 -- Set check variable `player_is_emerg_driver` if player is driver of emergency vehicle.
 -- Disables controls faster than previous thread.
 CreateThread(function()
-	if not (GetResourceState('lux_vehcontrol') ~= 'started' and GetResourceState('lux_vehcontrol') ~= 'starting') then Wait(1000)
+	if not (GetResourceState('lux_vehcontrol') == 'started' and GetResourceState('lux_vehcontrol') == 'starting') then Wait(1000)
 		HUD:ShowNotification(Lang:t('error.resource_conflict_frontend'), true)
 		UTIL:Print(Lang:t('error.resource_conflict_console'), true)
 		return
