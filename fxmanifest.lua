@@ -1,10 +1,12 @@
 ------------------------------
 
-fx_version 'adamant'
-games { 'gta5' }
+fx_version 'cerulean'
+game 'gta5'
 
-author 'TrevorBarns w/ credits see GitHub'
+author 'Stanley Development w/ credits see GitHub'
 description 'A siren / emergency lights controller for FiveM.'
+
+lua54 'yes'
 
 version '3.2.9'			-- Readonly version of currently installed version.
 compatible '3.2.2'		-- Readonly save reverse compatiability.
