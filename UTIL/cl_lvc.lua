@@ -84,8 +84,18 @@ local snd_airmanu = {}
 local RegisterKeyMaps, MakeOrdinal
 
 ----------------THREADED FUNCTIONS----------------
+
+-- This thread executes and runs once on resource start
+CreateThread(function()
+	debug_mode = GetResourceMetadata(GetCurrentResourceName(), 'debug_mode', 0) == 'true'
+	TriggerEvent('chat:addSuggestion', Lang:t('command.lock_command'), Lang:t('command.lock_desc'))
+	SetNuiFocus( false )
+	UTIL:FixOversizeKeys(SIREN_ASSIGNMENTS)
+	RegisterKeyMaps()
+	STORAGE:SetBackupTable()
+end)
+
 -- Set check variable `player_is_emerg_driver` if player is driver of emergency vehicle.
--- Disables controls faster than previous thread.
 CreateThread(function()
 	if not (GetResourceState('lux_vehcontrol') == 'started' and GetResourceState('lux_vehcontrol') == 'starting') then Wait(1000)
 		HUD:ShowNotification(Lang:t('error.resource_conflict_frontend'), true)
@@ -105,81 +115,62 @@ CreateThread(function()
 	while true do Wait(0)
 		playerped = GetPlayerPed(-1)
 		player_is_emerg_driver = false -- IS IN VEHICLE
-		if not IsPedInAnyVehicle(playerped, false) then return end
+		if not IsPedInAnyVehicle(playerped, false) then goto loopend end
 		veh = GetVehiclePedIsUsing(playerped)
 		_, trailer = GetVehicleTrailerVehicle(veh)
-		if not GetPedInVehicleSeat(veh, -1) == playerped then return end -- IS DRIVER
-		if not GetVehicleClass(veh) == 18 then return end -- IS EMERGENCY VEHICLE
+		if not GetPedInVehicleSeat(veh, -1) == playerped then goto loopend end -- IS DRIVER
+		if not GetVehicleClass(veh) == 18 then goto loopend end -- IS EMERGENCY VEHICLE
 		player_is_emerg_driver = true
 		DisableControlAction(0, 80, true) -- INPUT_VEH_CIN_CAM
 		DisableControlAction(0, 86, true) -- INPUT_VEH_HORN
 		DisableControlAction(0, 172, true) -- INPUT_CELLPHONE_UP
+		::loopend::
 	end
-end)
-
---On resource start/restart
-CreateThread(function()
-	debug_mode = GetResourceMetadata(GetCurrentResourceName(), 'debug_mode', 0) == 'true'
-	TriggerEvent('chat:addSuggestion', Lang:t('command.lock_command'), Lang:t('command.lock_desc'))
-	SetNuiFocus( false )
-
-	UTIL:FixOversizeKeys(SIREN_ASSIGNMENTS)
-	RegisterKeyMaps()
-	STORAGE:SetBackupTable()
 end)
 
 -- Auxiliary Control Handling
 --	Handles radio wheel controls and default horn on siren change playback.
 CreateThread(function()
-	while true do
-		if player_is_emerg_driver then
-			-- RADIO WHEEL
-			if IsControlPressed(0, 243) and AUDIO.radio_masterswitch then
-				while IsControlPressed(0, 243) do
-					radio_wheel_active = true
-					SetControlNormal(0, 85, 1.0)
-					Wait(0)
-				end
-				Wait(100)
-				radio_wheel_active = false
-			else
-				DisableControlAction(0, 85, true) -- INPUT_VEH_RADIO_WHEEL
-				SetVehicleRadioEnabled(veh, false)
-			end
+	while true do Wait(0)
+		if not player_is_emerg_driver then goto loopend end
+		if not (IsControlPressed(0, 243) and AUDIO.radio_masterswitch) then -- RADIO WHEEL
+			DisableControlAction(0, 85, true) -- INPUT_VEH_RADIO_WHEEL
+			SetVehicleRadioEnabled(veh, false)
+			goto loopend
 		end
-		Wait(0)
+		while IsControlPressed(0, 243) do Wait(0)
+			radio_wheel_active = true
+			SetControlNormal(0, 85, 1.0)
+		end
+		Wait(100)
+		radio_wheel_active = false
+		::loopend::
 	end
 end)
 
 ------ON VEHICLE EXIT EVENT TRIGGER------
 CreateThread(function()
-	while true do
-		if player_is_emerg_driver then
-			while playerped ~= nil and veh ~= nil do
-				if GetIsTaskActive(playerped, 2) and GetVehiclePedIsIn(ped, true) then
-					TriggerEvent('lvc:onVehicleExit')
-					Wait(1000)
-				end
-				Wait(0)
-			end
+	while true do Wait(1000)
+		if not player_is_emerg_driver then goto loopend end
+		if playerped == nil and veh == nil then goto loopend end
+		while GetIsTaskActive(playerped, 2) and GetVehiclePedIsIn(ped, true) do Wait(0)
+			TriggerEvent('lvc:onVehicleExit') 
+			Wait(1000) 
 		end
-		Wait(1000)
+		::loopend::
 	end
 end)
 
 ------VEHICLE CHANGE DETECTION AND TRIGGER------
 CreateThread(function()
-	while true do
-		if player_is_emerg_driver and veh ~= nil then
-			if last_veh == nil then
-				TriggerEvent('lvc:onVehicleChange')
-			else
-				if last_veh ~= veh then
-					TriggerEvent('lvc:onVehicleChange')
-				end
-			end
+	while true do Wait(1000)
+		if not (player_is_emerg_driver and veh == nil) then goto loopend end
+		if last_veh == nil then
+			TriggerEvent('lvc:onVehicleChange')
+		elseif last_veh ~= veh then
+			TriggerEvent('lvc:onVehicleChange')
 		end
-		Wait(1000)
+		::loopend::
 	end
 end)
 
